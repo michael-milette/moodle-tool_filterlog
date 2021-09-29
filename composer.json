@@ -1,0 +1,16 @@
+{
+    "name": "michael-milette/moodle-tool_filterlog",
+    "type": "moodle-tool",
+    "description": "This Moodle plugin enables administrators to automatically remove standard log entries for a particular user id.",
+    "license": "GPL-3.0+",
+    "require": {
+        "composer/installers": "~1.0"
+    },
+    "extra": {
+        "installer-name": "filterlog"
+    },
+    "support": {
+        "issues": "https://github.com/michael-milette/moodle-tool_filterlog/issues",
+        "source": "https://github.com/michael-milette/moodle-tool_filterlog/"
+    }
+}
