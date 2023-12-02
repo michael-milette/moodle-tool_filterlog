@@ -44,29 +44,52 @@ class cleanup_task extends \core\task\scheduled_task {
      * @return null
      */
     public function execute() {
-        global $DB; 
+        global $DB;
 
         $loglifetime = (int)get_config('tool_filterlog', 'loglifetime');
         $userid = (int)get_config('tool_filterlog', 'userid');
+        $webservices = get_config('tool_filterlog', 'webservices');
 
         if (!isset($loglifetime) || $loglifetime < 0 || empty($userid) || $userid < 0) {
             return;
         }
 
         $loglifetime = time() - ($loglifetime * 86400); // Value in days 60 seconds * 60 minutes * 24 hours.
-        $criteria = ['lifetime' => $loglifetime, 'id' => $userid];
+        $criteria = [
+        'lifetime' => $loglifetime,
+        'id' => $userid
+        ];
+
+        if (strlen($webservices) > 3) {
+            $webservices = explode(",",str_replace(' ','',$webservices));
+            $ws_where = [];
+            $ws_ins = [];
+
+            foreach ($webservices AS $i => $ws) {
+               $ws_where['ws'.$i] = $ws;
+               array_push($ws_ins,":ws$i");
+            }
+            $criteria = array_merge($criteria,$ws_where);
+            $where = "timecreated < :lifetime AND userid = :id AND JSON_EXTRACT(other, '$.function') IN(".implode(',',$ws_ins).")";
+        } else {
+            $where = "timecreated < :lifetime AND userid = :id";
+        }
+
         $start = time();
         $end = $start + 298; // Don't want the script to abort before we finish up.
         $looptime = -1;
         $table = 'logstore_standard_log';
 
-        while ($min = $DB->get_field_select($table, 'MIN(timecreated)', 'timecreated < :lifetime AND userid = :id', $criteria)) {
+        while ($min = $DB->get_field_select($table, 'MIN(timecreated)', $where , $criteria)) {
             // Delete in chunks of a day at a time to avoid long database transactions and thrashing.
             // If this cleanup plugin has just been enabled and the normal logstore standard clean-up is disabled and
             // you have years of logs, it might take a very long time to finish the trimming process, possibly even months.
             // In this case, you may want to do this manually instead and then optimize (mysql) or vaccuum (postgresql) to shrink your database table file size.
             $params = ['lifetime' => min($min + 3600 * 24, $loglifetime), 'id' => $userid];
-            $DB->delete_records_select($table, 'timecreated < :lifetime AND userid = :id', $params);
+            if (isset($ws_where)) {
+                $params = array_merge($params,$ws_where);
+            }
+            $DB->delete_records_select($table, $where, $params);
             $time = time();
             if ($looptime == -1) {
                 // Estimated future passes based on duration of first pass of the loop.
