@@ -44,12 +44,12 @@ class cleanup_task extends \core\task\scheduled_task {
      * @return null
      */
     public function execute() {
-        global $DB;
+        global $DB; 
 
         $loglifetime = (int)get_config('tool_filterlog', 'loglifetime');
         $userid = (int)get_config('tool_filterlog', 'userid');
 
-        if (empty($loglifetime) || $loglifetime < 0 || empty($userid) || $userid < 0) {
+        if (!isset($loglifetime) || $loglifetime < 0 || empty($userid) || $userid < 0) {
             return;
         }
 
