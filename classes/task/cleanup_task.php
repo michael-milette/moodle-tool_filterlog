@@ -49,7 +49,7 @@ class cleanup_task extends \core\task\scheduled_task {
         $loglifetime = (int)get_config('tool_filterlog', 'loglifetime');
         $userid = (int)get_config('tool_filterlog', 'userid');
         $webservices = get_config('tool_filterlog', 'webservices');
-
+        
         if (!isset($loglifetime) || $loglifetime < 0 || empty($userid) || $userid < 0) {
             return;
         }
@@ -67,19 +67,19 @@ class cleanup_task extends \core\task\scheduled_task {
 
             foreach ($webservices AS $i => $ws) {
                $ws_where['ws'.$i] = $ws;
-               array_push($ws_ins,":ws$i");
+               array_push($ws_ins,"JSON_EXTRACT(other, '$.function') = :ws$i");
             }
             $criteria = array_merge($criteria,$ws_where);
-            $where = "timecreated < :lifetime AND userid = :id AND JSON_EXTRACT(other, '$.function') IN(".implode(',',$ws_ins).")";
+            $where = "timecreated < :lifetime AND userid = :id AND (".implode(' OR ',$ws_ins).")";
         } else {
             $where = "timecreated < :lifetime AND userid = :id";
         }
-
+        
         $start = time();
         $end = $start + 298; // Don't want the script to abort before we finish up.
         $looptime = -1;
         $table = 'logstore_standard_log';
-
+        
         while ($min = $DB->get_field_select($table, 'MIN(timecreated)', $where , $criteria)) {
             // Delete in chunks of a day at a time to avoid long database transactions and thrashing.
             // If this cleanup plugin has just been enabled and the normal logstore standard clean-up is disabled and
@@ -88,7 +88,7 @@ class cleanup_task extends \core\task\scheduled_task {
             $params = ['lifetime' => min($min + 3600 * 24, $loglifetime), 'id' => $userid];
             if (isset($ws_where)) {
                 $params = array_merge($params,$ws_where);
-            }
+            }            
             $DB->delete_records_select($table, $where, $params);
             $time = time();
             if ($looptime == -1) {
