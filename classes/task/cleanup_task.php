@@ -76,7 +76,27 @@ class cleanup_task extends \core\task\scheduled_task {
         $start = time();
         $end = $start + 298; // Don't want the script to abort before we finish up.
         $looptime = -1;
-        $table = 'logstore_vericate_log';
+        $logstorename = get_config('tool_filterlog', 'logstorename'); 
+        if (!isset($logstorename) || strlen($logstorename) < 4 ) {
+            $table = 'logstore_standard_log';
+        } else {
+            $escape = [
+                "\0" => "\\0",
+                "\n" => "\\n",
+                "\r" => "\\r",
+                "\t" => "\\t",
+                chr(26) => "\\Z",
+                chr(8) => "\\b",
+                '"' => '\"',
+                "'" => "\'",
+                '_' => "\_",
+                "%" => "\%",
+                '\\' => '\\\\'
+            ];
+            $logstorename = strtr($logstorename, $escape);
+            $table = 'logstore_'.$logstorename.'_log'; 
+        }
+        var_dump($table);
         while ($min = $DB->get_field_select($table, 'MIN(timecreated)', $where , $criteria)) {
             // Delete in chunks of a day at a time to avoid long database transactions and thrashing.
             // If this cleanup plugin has just been enabled and the normal logstore standard clean-up is disabled and

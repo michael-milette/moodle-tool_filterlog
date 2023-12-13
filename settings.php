@@ -70,4 +70,12 @@ if ($hassiteconfig) {
         '',
         PARAM_TEXT
     ));
+
+    $settings->add(new admin_setting_configtext(
+        'tool_filterlog/logstorename',
+        get_string('logstorename', 'tool_filterlog'),
+        new lang_string('logstorename_desc', 'tool_filterlog'),
+        'standard',
+        PARAM_TEXT
+    ));
 }
