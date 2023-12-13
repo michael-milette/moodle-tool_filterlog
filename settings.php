@@ -15,92 +15,59 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Standard logstore trimmer for a specific user.
+ * Plugin administration pages are defined here.
  *
  * @package    tool_filterlog
+ * @category   admin
  * @copyright  2021 TNG Consulting Inc. {@link https://www.tngconsulting.ca}
  * @author     Michael Milette
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace tool_filterlog\task;
-
 defined('MOODLE_INTERNAL') || die();
 
-class cleanup_task extends \core\task\scheduled_task {
+if ($hassiteconfig) {
+    // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedIf
+    $settings = new admin_settingpage('tool_filterlog',  get_string('pluginname', 'tool_filterlog'));
+    $ADMIN->add('tools', $settings);
 
-    /**
-     * Get the descriptive name for this task (visible to admins).
-     *
-     * @return string
-     */
-    public function get_name() {
-        return get_string('taskcleanup', 'tool_filterlog');
-    }
+    // TODO: Define the plugin settings page - {@link https://docs.moodle.org/dev/Admin_settings}.
+    $options = array(
+        -1   => new lang_string('always'),
+        31   => new lang_string('numdays', '', 31),
+        28   => new lang_string('numdays', '', 28),
+        21   => new lang_string('numdays', '', 21),
+        14   => new lang_string('numdays', '', 14),
+        12   => new lang_string('numdays', '', 12),
+        10   => new lang_string('numdays', '', 10),
+        8    => new lang_string('numdays', '', 8),
+        5    => new lang_string('numdays', '', 5),
+        3    => new lang_string('numdays', '', 3),
+        2    => new lang_string('numdays', '', 2),
+        1    => new lang_string('numdays', '', 1),
+        0    => new lang_string('never')
+    );
+    $settings->add(new admin_setting_configselect(
+        'tool_filterlog/loglifetime',
+        new lang_string('loglifetime', 'core_admin'),
+        new lang_string('loglifetime_desc', 'tool_filterlog'),
+        -1,
+        $options
+    ));
 
-    /**
-     * Delete standard logstore records of the specified user id.
-     *
-     * @return null
-     */
-    public function execute() {
-        global $DB;
+    $settings->add(new admin_setting_configtext(
+        'tool_filterlog/userid',
+        get_string('userid', 'grades'),
+        new lang_string('userid_desc', 'tool_filterlog'),
+        '0',
+        PARAM_INT
+    ));
 
-        $loglifetime = (int)get_config('tool_filterlog', 'loglifetime');
-        $userid = (int)get_config('tool_filterlog', 'userid');
-        $webservices = get_config('tool_filterlog', 'webservices');
-
-        if (!isset($loglifetime) || $loglifetime < 0 || empty($userid) || $userid < 0) {
-            return;
-        }
-
-        $loglifetime = time() - ($loglifetime * 86400); // Value in days 60 seconds * 60 minutes * 24 hours.
-        $criteria = [
-        'lifetime' => $loglifetime,
-        'id' => $userid
-        ];
-
-        if (strlen($webservices) > 3) {
-            $webservices = explode(",",str_replace(' ','',$webservices));
-            $ws_where = [];
-            $ws_ins = [];
-
-            foreach ($webservices AS $i => $ws) {
-               $ws_where['ws'.$i] = $ws;
-               array_push($ws_ins,":ws$i");
-            }
-            $criteria = array_merge($criteria,$ws_where);
-            $where = "timecreated < :lifetime AND userid = :id AND JSON_EXTRACT(other, '$.function') IN(".implode(',',$ws_ins).")";
-        } else {
-            $where = "timecreated < :lifetime AND userid = :id";
-        }
-
-        $start = time();
-        $end = $start + 298; // Don't want the script to abort before we finish up.
-        $looptime = -1;
-        $table = 'logstore_standard_log';
-
-        while ($min = $DB->get_field_select($table, 'MIN(timecreated)', $where , $criteria)) {
-            // Delete in chunks of a day at a time to avoid long database transactions and thrashing.
-            // If this cleanup plugin has just been enabled and the normal logstore standard clean-up is disabled and
-            // you have years of logs, it might take a very long time to finish the trimming process, possibly even months.
-            // In this case, you may want to do this manually instead and then optimize (mysql) or vaccuum (postgresql) to shrink your database table file size.
-            $params = ['lifetime' => min($min + 3600 * 24, $loglifetime), 'id' => $userid];
-            if (isset($ws_where)) {
-                $params = array_merge($params,$ws_where);
-            }
-            $DB->delete_records_select($table, $where, $params);
-            $time = time();
-            if ($looptime == -1) {
-                // Estimated future passes based on duration of first pass of the loop.
-                $looptime = $time - $start;
-            }
-            if ($time > $end or $end < $time + $looptime) {
-                // Exit out of loop if we don't have time for another pass.
-                break;
-            }
-        }
-
-        mtrace(" Deleted user log records from standard store.");
-    }
+    $settings->add(new admin_setting_configtext(
+        'tool_filterlog/webservices',
+        get_string('ws', 'report_log'),
+        new lang_string('webservices_desc', 'tool_filterlog'),
+        '',
+        PARAM_TEXT
+    ));
 }

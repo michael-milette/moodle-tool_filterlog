@@ -49,11 +49,9 @@ class cleanup_task extends \core\task\scheduled_task {
         $loglifetime = (int)get_config('tool_filterlog', 'loglifetime');
         $userid = (int)get_config('tool_filterlog', 'userid');
         $webservices = get_config('tool_filterlog', 'webservices');
-        
         if (!isset($loglifetime) || $loglifetime < 0 || empty($userid) || $userid < 0) {
             return;
         }
-
         $loglifetime = time() - ($loglifetime * 86400); // Value in days 60 seconds * 60 minutes * 24 hours.
         $criteria = [
         'lifetime' => $loglifetime,
@@ -78,8 +76,7 @@ class cleanup_task extends \core\task\scheduled_task {
         $start = time();
         $end = $start + 298; // Don't want the script to abort before we finish up.
         $looptime = -1;
-        $table = 'logstore_standard_log';
-        
+        $table = 'logstore_vericate_log';
         while ($min = $DB->get_field_select($table, 'MIN(timecreated)', $where , $criteria)) {
             // Delete in chunks of a day at a time to avoid long database transactions and thrashing.
             // If this cleanup plugin has just been enabled and the normal logstore standard clean-up is disabled and
@@ -88,7 +85,8 @@ class cleanup_task extends \core\task\scheduled_task {
             $params = ['lifetime' => min($min + 3600 * 24, $loglifetime), 'id' => $userid];
             if (isset($ws_where)) {
                 $params = array_merge($params,$ws_where);
-            }            
+            }
+            
             $DB->delete_records_select($table, $where, $params);
             $time = time();
             if ($looptime == -1) {

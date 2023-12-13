@@ -30,4 +30,5 @@ $string['pluginname'] = 'FilterLog';
 $string['privacy:metadata'] = 'The FilterLog plugin does not store any personal data about any user.';
 $string['loglifetime_desc'] = 'This specifies the length of time you want to keep logs about the specified user activity, up to a maximum of the value set in the Standard Log settings. Older logs are automatically deleted for the specified user. Example use might be to delete log entries caused by Web Services.';
 $string['userid_desc'] = 'Caution: Be absolutely sure about the Moodle id of the user whose logs you want to trim or you may accidently affect the logs and analytics for a regular user.';
+$string['webservices_desc'] = 'Put in the web service functions you want to remove from the log. Separated with ,';
 $string['taskcleanup'] = 'Log table user cleanup';
