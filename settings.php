@@ -62,4 +62,20 @@ if ($hassiteconfig) {
         '0',
         PARAM_INT
     ));
+
+    $settings->add(new admin_setting_configtext(
+        'tool_filterlog/webservices',
+        get_string('ws', 'report_log'),
+        new lang_string('webservices_desc', 'tool_filterlog'),
+        '',
+        PARAM_TEXT
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'tool_filterlog/logstorename',
+        get_string('logstorename', 'tool_filterlog'),
+        new lang_string('logstorename_desc', 'tool_filterlog'),
+        'standard',
+        PARAM_TEXT
+    ));
 }
